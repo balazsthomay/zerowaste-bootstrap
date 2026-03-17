@@ -17,13 +17,15 @@ def _build_training_args(config: TrainConfig, device: str) -> TrainingArguments:
     """Build HuggingFace TrainingArguments from our config."""
     epochs = config.smoke_test_epochs if config.smoke_test else config.epochs
 
-    # Determine mixed precision
+    # Determine mixed precision based on device capabilities
     fp16 = False
     bf16 = False
     if device == "cuda":
-        fp16 = config.fp16 or True  # default to fp16 on CUDA
+        fp16 = config.fp16
+        bf16 = config.bf16
     elif device == "mps":
-        # MPS supports bf16 but not fp16 in newer torch
+        # MPS doesn't support fp16 training, use bf16 if requested
+        fp16 = False
         bf16 = config.bf16
 
     import os
@@ -49,7 +51,7 @@ def _build_training_args(config: TrainConfig, device: str) -> TrainingArguments:
         logging_steps=config.logging_steps,
         dataloader_num_workers=config.num_workers,
         remove_unused_columns=False,
-        report_to="tensorboard",
+        report_to="none",
     )
 
 

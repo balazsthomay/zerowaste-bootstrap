@@ -74,10 +74,17 @@ def evaluate_model(
             continue
 
         # Convert each segment to COCO result format
+        # Map model's 0-indexed labels back to COCO category IDs
+        coco_cat_ids = sorted(coco_gt.getCatIds())
         pred_masks = pred["segmentation"]
         for seg_info in segments:
             seg_id = seg_info["id"]
-            category_id = seg_info["label_id"]
+            model_label = seg_info["label_id"]
+            # Remap 0-indexed model output to COCO category ID
+            if model_label < len(coco_cat_ids):
+                category_id = coco_cat_ids[model_label]
+            else:
+                continue  # skip invalid labels (e.g. no-object class)
             score = seg_info["score"]
 
             # Extract binary mask for this segment

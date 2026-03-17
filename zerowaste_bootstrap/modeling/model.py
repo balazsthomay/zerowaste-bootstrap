@@ -25,8 +25,10 @@ def load_model(
     """
     logger.info("Loading model %s with %d classes", pretrained, num_classes)
 
-    id2label = {k: v for k, v in ZEROWASTE_CLASSES.items()}
-    label2id = {v: k for k, v in id2label.items()}
+    # Model uses 0-indexed class labels; ZEROWASTE_CLASSES uses COCO IDs (1-4)
+    class_names = list(ZEROWASTE_CLASSES.values())
+    id2label = {i: name for i, name in enumerate(class_names)}
+    label2id = {name: i for i, name in enumerate(class_names)}
 
     model = Mask2FormerForUniversalSegmentation.from_pretrained(
         pretrained,

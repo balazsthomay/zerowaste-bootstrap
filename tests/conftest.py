@@ -29,10 +29,10 @@ def synthetic_coco_dir(tmp_path: Path) -> Path:
     img_w, img_h = 64, 64
     num_images = 5
     categories = [
-        {"id": 0, "name": "rigid_plastic"},
-        {"id": 1, "name": "cardboard"},
-        {"id": 2, "name": "metal"},
-        {"id": 3, "name": "soft_plastic"},
+        {"id": 1, "name": "rigid_plastic"},
+        {"id": 2, "name": "cardboard"},
+        {"id": 3, "name": "metal"},
+        {"id": 4, "name": "soft_plastic"},
     ]
 
     images = []
@@ -58,7 +58,7 @@ def synthetic_coco_dir(tmp_path: Path) -> Path:
         # Add 2-3 instances per image
         num_instances = rng.randint(2, 4)
         for _ in range(num_instances):
-            cat_id = int(rng.randint(0, 4))
+            cat_id = int(rng.randint(1, 5))  # 1-indexed: 1,2,3,4
             # Random bbox
             x = int(rng.randint(0, img_w - 16))
             y = int(rng.randint(0, img_h - 16))

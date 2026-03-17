@@ -88,7 +88,7 @@ class TestBuildTrainingArgs:
         config = TrainConfig(output_dir="/tmp/test_train")
         args = _build_training_args(config, device="cpu")
         assert args.num_train_epochs == 50
-        assert args.per_device_train_batch_size == 4
+        assert args.per_device_train_batch_size == 8
 
     def test_smoke_test_config(self):
         config = TrainConfig(output_dir="/tmp/test_train", smoke_test=True)

@@ -41,7 +41,7 @@ class TestTrainConfig:
     def test_defaults(self):
         cfg = TrainConfig()
         assert cfg.learning_rate == 1e-5
-        assert cfg.batch_size == 4
+        assert cfg.batch_size == 8
         assert cfg.epochs == 50
         assert cfg.device == "auto"
         assert cfg.smoke_test is False

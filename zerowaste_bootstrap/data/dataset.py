@@ -93,10 +93,15 @@ class ZeroWasteDataset(Dataset):
         ignore_index = self.processor.ignore_index if self.processor.ignore_index is not None else 255
         instance_id_to_semantic_id: dict[int, int] = {0: ignore_index}
 
+        # Build COCO category_id → 0-indexed model class mapping
+        cat_ids = sorted(self.coco.getCatIds())
+        cat_id_to_contiguous = {cat_id: i for i, cat_id in enumerate(cat_ids)}
+
         for instance_id_offset, ann in enumerate(annotations, start=1):
             mask = self.coco.annToMask(ann)  # binary (H, W)
             instance_seg_map[mask == 1] = instance_id_offset
-            instance_id_to_semantic_id[instance_id_offset] = ann["category_id"]
+            # Map COCO category_id (e.g. 1-4) to contiguous 0-indexed class
+            instance_id_to_semantic_id[instance_id_offset] = cat_id_to_contiguous[ann["category_id"]]
 
         # 5. Preprocess with the Mask2Former processor
         inputs = self.processor(
@@ -115,6 +120,16 @@ class ZeroWasteDataset(Dataset):
                 result[key] = value[0]
             else:
                 result[key] = value
+
+        # 7. Filter out background/ignore entries from class_labels and mask_labels.
+        #    The processor includes a mask for the background instance with
+        #    class label = ignore_index (255), which is out of bounds for the model.
+        if "class_labels" in result and "mask_labels" in result:
+            class_labels = result["class_labels"]
+            valid = class_labels != ignore_index
+            result["class_labels"] = class_labels[valid]
+            result["mask_labels"] = result["mask_labels"][valid]
+
         return result
 
 

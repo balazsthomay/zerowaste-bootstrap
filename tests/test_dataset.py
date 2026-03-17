@@ -174,7 +174,7 @@ def _make_coco_json(tmp_path: Path, name: str, num_images: int, start_img_id: in
         annotations.append({
             "id": ann_id,
             "image_id": img_id,
-            "category_id": 0,
+            "category_id": 1,
             "segmentation": [[x, y, x + 10, y, x + 10, y + 10, x, y + 10]],
             "area": 100.0,
             "bbox": [float(x), float(y), 10.0, 10.0],
@@ -186,10 +186,10 @@ def _make_coco_json(tmp_path: Path, name: str, num_images: int, start_img_id: in
         "images": images,
         "annotations": annotations,
         "categories": [
-            {"id": 0, "name": "rigid_plastic"},
-            {"id": 1, "name": "cardboard"},
-            {"id": 2, "name": "metal"},
-            {"id": 3, "name": "soft_plastic"},
+            {"id": 1, "name": "rigid_plastic"},
+            {"id": 2, "name": "cardboard"},
+            {"id": 3, "name": "metal"},
+            {"id": 4, "name": "soft_plastic"},
         ],
     }
     path = tmp_path / f"{name}.json"

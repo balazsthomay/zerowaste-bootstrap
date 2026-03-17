@@ -24,10 +24,10 @@ from zerowaste_bootstrap.pseudo_label.generate import (
 def raw_pseudo_labels(tmp_path: Path) -> Path:
     """Create a raw pseudo-label COCO JSON with scores."""
     categories = [
-        {"id": 0, "name": "rigid_plastic"},
-        {"id": 1, "name": "cardboard"},
-        {"id": 2, "name": "metal"},
-        {"id": 3, "name": "soft_plastic"},
+        {"id": 1, "name": "rigid_plastic"},
+        {"id": 2, "name": "cardboard"},
+        {"id": 3, "name": "metal"},
+        {"id": 4, "name": "soft_plastic"},
     ]
     images = [
         {"id": 0, "file_name": "img_0.png", "width": 64, "height": 64},
@@ -36,19 +36,19 @@ def raw_pseudo_labels(tmp_path: Path) -> Path:
     ]
     annotations = [
         # High confidence, large area → keep
-        {"id": 0, "image_id": 0, "category_id": 0, "area": 500, "score": 0.95, "bbox": [0, 0, 20, 25], "iscrowd": 0,
+        {"id": 0, "image_id": 0, "category_id": 1, "area": 500, "score": 0.95, "bbox": [0, 0, 20, 25], "iscrowd": 0,
          "segmentation": {"size": [64, 64], "counts": "0"}},
         # Low confidence → remove
-        {"id": 1, "image_id": 0, "category_id": 1, "area": 300, "score": 0.3, "bbox": [10, 10, 15, 20], "iscrowd": 0,
+        {"id": 1, "image_id": 0, "category_id": 2, "area": 300, "score": 0.3, "bbox": [10, 10, 15, 20], "iscrowd": 0,
          "segmentation": {"size": [64, 64], "counts": "0"}},
         # High confidence, tiny area → remove
-        {"id": 2, "image_id": 1, "category_id": 2, "area": 50, "score": 0.9, "bbox": [5, 5, 5, 10], "iscrowd": 0,
+        {"id": 2, "image_id": 1, "category_id": 3, "area": 50, "score": 0.9, "bbox": [5, 5, 5, 10], "iscrowd": 0,
          "segmentation": {"size": [64, 64], "counts": "0"}},
         # High confidence, large area → keep
-        {"id": 3, "image_id": 1, "category_id": 3, "area": 200, "score": 0.8, "bbox": [20, 20, 10, 20], "iscrowd": 0,
+        {"id": 3, "image_id": 1, "category_id": 4, "area": 200, "score": 0.8, "bbox": [20, 20, 10, 20], "iscrowd": 0,
          "segmentation": {"size": [64, 64], "counts": "0"}},
         # Borderline confidence → remove (below 0.7)
-        {"id": 4, "image_id": 2, "category_id": 0, "area": 400, "score": 0.69, "bbox": [0, 0, 20, 20], "iscrowd": 0,
+        {"id": 4, "image_id": 2, "category_id": 1, "area": 400, "score": 0.69, "bbox": [0, 0, 20, 20], "iscrowd": 0,
          "segmentation": {"size": [64, 64], "counts": "0"}},
     ]
 
@@ -155,8 +155,8 @@ class TestSaveResults:
         """Test _save_results writes valid JSON."""
         output = tmp_path / "output.json"
         images = [{"id": 0, "file_name": "img.png", "width": 64, "height": 64}]
-        annotations = [{"id": 0, "image_id": 0, "category_id": 0, "area": 100}]
-        categories = [{"id": 0, "name": "rigid_plastic"}]
+        annotations = [{"id": 0, "image_id": 0, "category_id": 1, "area": 100}]
+        categories = [{"id": 1, "name": "rigid_plastic"}]
 
         _save_results(output, images, annotations, categories)
 
@@ -338,7 +338,7 @@ class TestGeneratePseudoLabels:
                 {
                     "id": 0,
                     "image_id": 0,
-                    "category_id": 0,
+                    "category_id": 1,
                     "segmentation": {"size": [32, 32], "counts": "0"},
                     "area": 100,
                     "bbox": [5, 5, 10, 10],
@@ -347,10 +347,10 @@ class TestGeneratePseudoLabels:
                 }
             ],
             "categories": [
-                {"id": 0, "name": "rigid_plastic"},
-                {"id": 1, "name": "cardboard"},
-                {"id": 2, "name": "metal"},
-                {"id": 3, "name": "soft_plastic"},
+                {"id": 1, "name": "rigid_plastic"},
+                {"id": 2, "name": "cardboard"},
+                {"id": 3, "name": "metal"},
+                {"id": 4, "name": "soft_plastic"},
             ],
         }
         with open(output_json, "w") as f:

@@ -7,10 +7,10 @@ from pydantic_settings import BaseSettings
 
 
 ZEROWASTE_CLASSES = {
-    0: "rigid_plastic",
-    1: "cardboard",
-    2: "metal",
-    3: "soft_plastic",
+    1: "rigid_plastic",
+    2: "cardboard",
+    3: "metal",
+    4: "soft_plastic",
 }
 
 LABEL2ID = {v: k for k, v in ZEROWASTE_CLASSES.items()}
@@ -34,7 +34,7 @@ class TrainConfig(BaseSettings):
     model_config = {"env_prefix": "ZEROWASTE_TRAIN_"}
 
     learning_rate: float = 1e-5
-    batch_size: int = 4
+    batch_size: int = 8
     epochs: int = 50
     device: str = "auto"
     output_dir: Path = Field(
@@ -43,8 +43,8 @@ class TrainConfig(BaseSettings):
     smoke_test: bool = False
     smoke_test_samples: int = 10
     smoke_test_epochs: int = 2
-    num_workers: int = 0
-    fp16: bool = False
+    num_workers: int = 2
+    fp16: bool = True
     bf16: bool = False
     save_total_limit: int = 3
     eval_strategy: str = "epoch"

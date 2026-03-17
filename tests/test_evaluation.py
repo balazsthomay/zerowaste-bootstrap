@@ -420,7 +420,7 @@ class TestEvaluateFromResults:
                 {
                     "id": 1,
                     "image_id": 1,
-                    "category_id": 0,
+                    "category_id": 1,
                     "segmentation": {
                         "counts": rle["counts"].decode("utf-8"),
                         "size": list(rle["size"]),
@@ -431,10 +431,10 @@ class TestEvaluateFromResults:
                 },
             ],
             "categories": [
-                {"id": 0, "name": "rigid_plastic"},
-                {"id": 1, "name": "cardboard"},
-                {"id": 2, "name": "metal"},
-                {"id": 3, "name": "soft_plastic"},
+                {"id": 1, "name": "rigid_plastic"},
+                {"id": 2, "name": "cardboard"},
+                {"id": 3, "name": "metal"},
+                {"id": 4, "name": "soft_plastic"},
             ],
         }
         gt_path = tmp_path / "gt.json"
@@ -468,7 +468,7 @@ class TestEvaluateFromResults:
         results = [
             {
                 "image_id": 1,
-                "category_id": 0,
+                "category_id": 1,
                 "segmentation": {
                     "counts": rle["counts"].decode("utf-8"),
                     "size": list(rle["size"]),
@@ -502,7 +502,7 @@ class TestEvaluateFromResults:
         results = [
             {
                 "image_id": 1,
-                "category_id": 2,  # metal, but GT is rigid_plastic
+                "category_id": 3,  # metal, but GT is rigid_plastic
                 "segmentation": {
                     "counts": rle["counts"].decode("utf-8"),
                     "size": list(rle["size"]),
