@@ -183,7 +183,10 @@ def generate_synthetic_images(
     all_objects = obj_metadata
 
     # Find backgrounds
-    bg_paths = sorted(background_dir.glob("*.png")) + sorted(background_dir.glob("*.jpg"))
+    bg_paths = sorted(
+        p for p in background_dir.iterdir()
+        if p.suffix.lower() in (".png", ".jpg", ".jpeg", ".bmp")
+    )
     if not bg_paths:
         logger.error("No background images found in %s", background_dir)
         return output_dir

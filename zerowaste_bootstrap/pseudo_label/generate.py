@@ -117,9 +117,17 @@ def generate_pseudo_labels(
 
             seg_map = pred["segmentation"].cpu().numpy()
 
+            # Map model's 0-indexed labels to COCO category IDs
+            coco_cat_ids = sorted(ZEROWASTE_CLASSES.keys())  # [1, 2, 3, 4]
+
             for seg_info in pred["segments_info"]:
                 seg_id_val = seg_info["id"]
-                category_id = seg_info["label_id"]
+                model_label = seg_info["label_id"]
+                # Remap 0-indexed model output to COCO category ID
+                if model_label < len(coco_cat_ids):
+                    category_id = coco_cat_ids[model_label]
+                else:
+                    continue
                 score = float(seg_info["score"])
 
                 binary_mask = (seg_map == seg_id_val).astype(np.uint8)

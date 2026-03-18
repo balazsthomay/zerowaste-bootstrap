@@ -151,13 +151,13 @@ def download():
                 check=True,
             )
 
-        # Extract multi-part zip (use the .zip file as entry point)
+        # Extract multi-part zip using 7z (handles split archives)
         tmp_extract = pathlib.Path("/tmp/extracted_unlabeled")
         tmp_extract.mkdir(exist_ok=True)
         zip_entry = pathlib.Path(f"/tmp/{UNLABELED_PARTS[-1]}")  # the .zip file
-        print("Extracting unlabeled data...")
+        print("Extracting unlabeled data with 7z...")
         subprocess.run(
-            ["unzip", "-o", "-P", ZIP_PASSWORD, str(zip_entry), "-d", str(tmp_extract)],
+            ["7z", "x", f"-p{ZIP_PASSWORD}", f"-o{tmp_extract}", "-y", str(zip_entry)],
             check=True,
         )
 
@@ -243,9 +243,33 @@ def train(
         num_workers=2,
     )
 
+    # Determine extra data sources based on experiment name
+    from pathlib import Path
+
+    pseudo_labels_path = None
+    synthetic_data_path = None
+
+    if experiment in ("pseudo", "both"):
+        pseudo_path = Path(f"{DATA_DIR}/output/pseudo_labels/filtered.json")
+        if pseudo_path.exists():
+            pseudo_labels_path = pseudo_path
+            print(f"Including pseudo-labels: {pseudo_path}")
+        else:
+            print("WARNING: pseudo-labels not found, training without them")
+
+    if experiment in ("augment", "both"):
+        synth_path = Path(f"{DATA_DIR}/output/synthetic")
+        if (synth_path / "annotations.json").exists():
+            synthetic_data_path = synth_path
+            print(f"Including synthetic data: {synth_path}")
+        else:
+            print("WARNING: synthetic data not found, training without it")
+
     best_dir = run_training(
         train_config=train_config,
         data_config=data_config,
+        pseudo_labels_path=pseudo_labels_path,
+        synthetic_data_path=synthetic_data_path,
     )
 
     volume.commit()
@@ -287,6 +311,101 @@ def evaluate(
     volume.commit()
     print(f"Evaluation complete: {metrics}")
     return metrics
+
+
+# ---------------------------------------------------------------------------
+# Augmentation (CPU-only, no GPU needed)
+# ---------------------------------------------------------------------------
+@app.function(
+    image=training_image,
+    volumes={DATA_DIR: volume},
+    timeout=60 * 60 * 2,
+)
+def augment(num_synthetic: int = 1000, seed: int = 42):
+    """Build object bank and generate synthetic cut-paste images."""
+    from pathlib import Path
+
+    from zerowaste_bootstrap.data.augmentation import (
+        build_object_bank,
+        generate_synthetic_images,
+    )
+
+    train_dir = Path(f"{DATA_DIR}/zerowaste-f/train")
+    output_dir = Path(f"{DATA_DIR}/output/synthetic")
+    object_bank_dir = output_dir / "object_bank"
+
+    print("Building object bank...")
+    build_object_bank(
+        coco_json=train_dir / "labels.json",
+        image_dir=train_dir / "data",
+        output_dir=object_bank_dir,
+    )
+
+    print(f"Generating {num_synthetic} synthetic images...")
+    generate_synthetic_images(
+        object_bank_dir=object_bank_dir,
+        background_dir=train_dir / "data",
+        output_dir=output_dir,
+        num_images=num_synthetic,
+        seed=seed,
+    )
+
+    volume.commit()
+    print(f"Augmentation complete: {output_dir}")
+
+
+# ---------------------------------------------------------------------------
+# Pseudo-labeling (GPU)
+# ---------------------------------------------------------------------------
+@app.function(
+    image=training_image,
+    gpu="L4",
+    volumes={DATA_DIR: volume},
+    timeout=60 * 60 * 4,
+)
+def pseudo_label(threshold: float = 0.7, min_area: int = 100):
+    """Generate pseudo-labels on unlabeled data using baseline model."""
+    from pathlib import Path
+
+    from zerowaste_bootstrap.pseudo_label.generate import generate_pseudo_labels
+    from zerowaste_bootstrap.pseudo_label.filter import filter_pseudo_labels
+
+    checkpoint = Path(f"{DATA_DIR}/output/baseline/best")
+    image_dir = Path(f"{DATA_DIR}/zerowaste-s/data")
+    output_dir = Path(f"{DATA_DIR}/output/pseudo_labels")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    raw_json = output_dir / "raw.json"
+    filtered_json = output_dir / "filtered.json"
+
+    # Clear any previous empty/failed results to avoid resume skipping
+    if raw_json.exists():
+        import json
+        with open(raw_json) as f:
+            existing = json.load(f)
+        if len(existing.get("annotations", [])) == 0:
+            raw_json.unlink()
+            print("Cleared empty previous results.")
+
+    print("Generating pseudo-labels...")
+    generate_pseudo_labels(
+        model_path=checkpoint,
+        image_dir=image_dir,
+        output_json=raw_json,
+        device="cuda",
+        batch_size=8,
+    )
+
+    print(f"Filtering (threshold={threshold}, min_area={min_area})...")
+    filter_pseudo_labels(
+        raw_json=raw_json,
+        output_json=filtered_json,
+        confidence_threshold=threshold,
+        min_mask_area=min_area,
+    )
+
+    volume.commit()
+    print(f"Pseudo-labeling complete: {filtered_json}")
 
 
 # ---------------------------------------------------------------------------
@@ -334,5 +453,36 @@ def main(
         )
         print(f"Smoke test complete: {result}")
 
+    elif action == "augment":
+        print("Generating synthetic training data...")
+        augment.remote(num_synthetic=1000)
+
+    elif action == "pseudo-label":
+        print("Generating pseudo-labels on unlabeled data...")
+        pseudo_label.remote()
+
+    elif action == "train-augment":
+        # Train with labeled + synthetic data
+        print("Training with augmented data...")
+        result = train.remote(
+            experiment="augment",
+            epochs=epochs,
+            batch_size=batch_size,
+            lr=lr,
+        )
+        print(f"Best model: {result}")
+
+    elif action == "train-pseudo":
+        # Train with labeled + pseudo-labels
+        print("Training with pseudo-labels...")
+        result = train.remote(
+            experiment="pseudo",
+            epochs=epochs,
+            batch_size=batch_size,
+            lr=lr,
+        )
+        print(f"Best model: {result}")
+
     else:
-        print(f"Unknown action: {action}. Use: download, train, evaluate, smoke-test")
+        print(f"Unknown action: {action}")
+        print("Available: download, train, evaluate, smoke-test, augment, pseudo-label, train-augment, train-pseudo")
